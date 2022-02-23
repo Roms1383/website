@@ -393,6 +393,64 @@ stream! {
 # }
 ```
 
+## Utilities
+
+Tokio also provides utilities for the most common tasks.
+
+### io
+
+Since [`copy`] requires an [`AsyncRead`], a common practice is to use [`StreamReader`]
+to convert from a `Stream<Item = Bytes>`, like so:
+
+```rust
+# use bytes::{BufMut, Bytes};
+# use tokio::io;
+# use tokio_util::io::StreamReader;
+
+# async fn dox() -> io::Result<()> {
+# let stream = tokio_stream::iter(vec![
+#     io::Result::Ok(Bytes::from_static(&[0, 1, 2, 3])),
+#     io::Result::Ok(Bytes::from_static(&[4, 5, 6, 7])),
+#     io::Result::Ok(Bytes::from_static(&[8, 9, 10, 11])),
+# ]);
+# 
+let mut reader = StreamReader::new(stream);
+let mut writer: Vec<u8> = vec![];
+
+// note that the reader is consumed after copy (and left empty)
+io::copy(&mut reader, &mut writer).await?;
+# 
+#    assert_eq!(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], &writer[..]);
+#    Ok(())
+# }
+```
+
+Sometimes it can be as convenient to simply use:
+
+```rust
+# use tokio::io;
+
+# async fn dox() -> io::Result<()> {
+#     let mut stream = tokio_stream::iter(vec![
+#         io::Result::Ok(Bytes::from_static(&[0, 1, 2, 3])),
+#         io::Result::Ok(Bytes::from_static(&[4, 5, 6, 7])),
+#         io::Result::Ok(Bytes::from_static(&[8, 9, 10, 11])),
+#     ]);
+# 
+let mut buf: Vec<u8> = vec![];
+while let Some(io::Result::Ok(bytes)) = stream.next().await {
+    buf.put(bytes);
+}
+# 
+#    assert_eq!(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], &buf[..]);
+#    Ok(())
+# }
+```
+Both examples are identical in outcome, if only in performance:
+it's worth noting that [`copy`] will use an intermediate buffer,
+which can be avoided by using [`copy_buf`] instead.
+
+
 [iter]: https://doc.rust-lang.org/book/ch13-02-iterators.html
 [`Stream`]: https://docs.rs/futures-core/0.3/futures_core/stream/trait.Stream.html
 [`Future`]: https://doc.rust-lang.org/std/future/trait.Future.html
@@ -409,3 +467,7 @@ stream! {
 [`async-stream`]: https://docs.rs/async-stream
 [`into_stream()`]: https://docs.rs/mini-redis/0.4/mini_redis/client/struct.Subscriber.html#method.into_stream
 [`tokio::pin!`]: https://docs.rs/tokio/1/tokio/macro.pin.html
+[`StreamReader`]: https://docs.rs/tokio-util/0.7.0/tokio_util/io/struct.StreamReader.html
+[`copy`]: https://docs.rs/tokio/1.17.0/tokio/io/fn.copy.html
+[`copy_buf`]: https://docs.rs/tokio/1.17.0/tokio/io/fn.copy_buf.html
+[`Bytes`]: https://docs.rs/bytes/1.1.0/bytes/struct.Bytes.html
