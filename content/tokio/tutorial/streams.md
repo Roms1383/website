@@ -438,18 +438,19 @@ Sometimes it can be as convenient to simply use:
 #     ]);
 # 
 let mut buf: Vec<u8> = vec![];
-while let Some(io::Result::Ok(bytes)) = stream.next().await {
-    buf.put(bytes);
+while let Some(item) = stream.next().await {
+    buf.put(item?);
 }
 # 
 #    assert_eq!(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], &buf[..]);
 #    Ok(())
 # }
 ```
-Both examples are identical in outcome, if only in performance:
+Both examples are identical, if only in performance:
 it's worth noting that [`copy`] will use an intermediate buffer,
 which can be avoided by using [`copy_buf`] instead.
 
+An example of a `Stream<Item = Bytes>` would be a byte stream response from `reqwest`.
 
 [iter]: https://doc.rust-lang.org/book/ch13-02-iterators.html
 [`Stream`]: https://docs.rs/futures-core/0.3/futures_core/stream/trait.Stream.html
@@ -471,3 +472,4 @@ which can be avoided by using [`copy_buf`] instead.
 [`copy`]: https://docs.rs/tokio/1.17.0/tokio/io/fn.copy.html
 [`copy_buf`]: https://docs.rs/tokio/1.17.0/tokio/io/fn.copy_buf.html
 [`Bytes`]: https://docs.rs/bytes/1.1.0/bytes/struct.Bytes.html
+[`reqwest`]: https://docs.rs/reqwest/latest/reqwest/struct.Response.html#method.bytes_stream
